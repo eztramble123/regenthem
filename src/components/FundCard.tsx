@@ -11,16 +11,16 @@ interface FundCardProps {
 
 export default function FundCard({ fund, onSupportClick }: FundCardProps) {
   const [imageError, setImageError] = useState(false);
-  
+
   // Generate a fallback image URL based on the address
   const getRandomImageUrl = () => {
     const imageHash = fund.address.slice(2, 10);
     return `https://picsum.photos/seed/${imageHash}/400/300`;
   };
-  
+
   // Use the provided image URL, or fall back to random image if error
   const imageUrl = imageError ? getRandomImageUrl() : fund.image;
-  
+
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800">
       <div className="relative">

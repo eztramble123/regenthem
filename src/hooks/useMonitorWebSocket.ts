@@ -7,7 +7,7 @@ let connectionAttemptTime = 0;
 const MIN_RECONNECT_INTERVAL = 5000; // 5 seconds
 
 // Track funds we've already processed to avoid duplicates
-let processedFunds = new Set<string>();
+const processedFunds = new Set<string>();
 
 export function useMonitorWebSocket(
   isConnected: boolean,
@@ -51,28 +51,30 @@ export function useMonitorWebSocket(
     const processMessage = async (message: any) => {
       if (message.type === "new_fund") {
         const { address, name } = message.data;
-        
+
         // Skip if we've already processed this fund
         if (processedFunds.has(address)) {
           console.log(`Skipping already processed fund: ${name} (${address})`);
           return;
         }
-        
+
         // Mark as processed
         processedFunds.add(address);
-        
+
         // Show only one toast notification
         addToast(`New fund created: ${name}`);
-        
+
         // Check if we have a saved image URL for this fund
         let savedImage = "";
         try {
-          const fundImages = JSON.parse(localStorage.getItem('fundImages') || '{}');
+          const fundImages = JSON.parse(
+            localStorage.getItem("fundImages") || "{}",
+          );
           savedImage = fundImages[name] || "";
         } catch (e) {
           console.error("Error retrieving saved image:", e);
         }
-        
+
         // Fetch the fund data
         const fundData = await fetchFundData(address);
         if (fundData) {
@@ -80,9 +82,9 @@ export function useMonitorWebSocket(
           if (savedImage) {
             fundData.image = savedImage;
           }
-          
-          setProjects(prev => {
-            if (prev.some(p => p.address === address)) return prev;
+
+          setProjects((prev) => {
+            if (prev.some((p) => p.address === address)) return prev;
             return [...prev, fundData];
           });
         }

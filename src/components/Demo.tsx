@@ -220,15 +220,15 @@ export default function Demo() {
 
     try {
       const goalInWei = ethers.utils.parseUnits(values.goal.toString(), 18);
-      
+
       // Save the image value for later
       const imageUrl = values.image || ""; // Use empty string if image is not provided
-      
+
       // Check image URL is valid (optional)
       const isImageValid = imageUrl === "" || imageUrl.startsWith("http");
-      
+
       // Add to pending funds with image
-      setPendingFunds(prev => [
+      setPendingFunds((prev) => [
         ...prev,
         {
           name: values.name as string,
@@ -236,7 +236,7 @@ export default function Demo() {
           image: isImageValid ? imageUrl : "", // Only use the image if it's valid
         },
       ]);
-      
+
       // Create the fund on the blockchain
       createFund({
         address: FACTORY_ADDRESS as `0x${string}`,
@@ -244,26 +244,27 @@ export default function Demo() {
         functionName: "createRegenThemFund",
         args: [values.name, values.description, goalInWei],
       });
-      
+
       // Store image URL in localStorage
       if (isImageValid && imageUrl) {
-        const fundImages = JSON.parse(localStorage.getItem('fundImages') || '{}');
+        const fundImages = JSON.parse(
+          localStorage.getItem("fundImages") || "{}",
+        );
         fundImages[values.name as string] = imageUrl;
-        localStorage.setItem('fundImages', JSON.stringify(fundImages));
+        localStorage.setItem("fundImages", JSON.stringify(fundImages));
       }
-      
+
       // Only show transaction submitted toast (not fund created - WebSocket will handle that)
       toast.success("Transaction submitted!");
-      
+
       // Reset form
       projectForm.reset();
-      
+
       // Force close the dialog with a short delay to ensure state updates properly
       setTimeout(() => {
         setShowCreateDialog(false);
         console.log("Dialog should be closed now");
       }, 100);
-      
     } catch (error) {
       console.error("Error creating fund:", error);
       toast.error("Failed to create fund");
