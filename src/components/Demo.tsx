@@ -81,7 +81,7 @@ const formSchema = z.object({
   image: z.string().url({ message: "Image must be a valid URL." }),
   goal: z.preprocess(
     (val) => Number(val),
-    z.number().min(1, { message: "Goal amount must be at least 1." })
+    z.number().min(1, { message: "Goal amount must be at least 1." }),
   ),
 });
 
@@ -89,7 +89,7 @@ const formSchema = z.object({
 const donationFormSchema = z.object({
   amount: z.preprocess(
     (val) => Number(val),
-    z.number().min(0.01, { message: "Amount must be at least 0.01 USDC." })
+    z.number().min(0.01, { message: "Amount must be at least 0.01 USDC." }),
   ),
 });
 
@@ -265,7 +265,7 @@ export default function Demo() {
     const checkReceipt = async () => {
       try {
         const provider = new ethers.providers.JsonRpcProvider(
-          "https://sepolia.base.org"
+          "https://sepolia.base.org",
         );
         const receipt = await provider.getTransactionReceipt(createFundTxHash);
 
@@ -319,7 +319,7 @@ export default function Demo() {
       });
 
       toast.success(
-        `Donating ${values.amount} USDC to ${selectedProject.name}`
+        `Donating ${values.amount} USDC to ${selectedProject.name}`,
       );
       setShowDonateDialog(false);
     } catch (error) {
@@ -351,17 +351,17 @@ export default function Demo() {
       try {
         // Important: Use JsonRpcProvider instead of Web3Provider for event monitoring
         const provider = new ethers.providers.JsonRpcProvider(
-          "https://sepolia.base.org"
+          "https://sepolia.base.org",
         );
 
         const factoryContract = new ethers.Contract(
           FACTORY_ADDRESS,
           FactoryABI.abi,
-          provider
+          provider,
         );
 
         console.log(
-          "FRONTEND: Setting up event listener for RegenThemFundCreated"
+          "FRONTEND: Setting up event listener for RegenThemFundCreated",
         );
 
         // Add more logging to catch the event
@@ -390,7 +390,7 @@ export default function Demo() {
                 return [...prev, newFundData];
               });
             }
-          }
+          },
         );
 
         return () => {
@@ -432,11 +432,11 @@ export default function Demo() {
 
       if (result.success && result.funds && result.funds.length > 0) {
         console.log(
-          "Funds found but not showing in UI. This suggests a display issue."
+          "Funds found but not showing in UI. This suggests a display issue.",
         );
       } else {
         console.log(
-          "No funds found in contract. This suggests a contract or connection issue."
+          "No funds found in contract. This suggests a contract or connection issue.",
         );
       }
     };
@@ -450,7 +450,7 @@ export default function Demo() {
   const wsHookResult = useMonitorWebSocket(
     isConnected,
     setProjects,
-    (message) => toast.info(message)
+    (message) => toast.info(message),
   );
 
   // Then, in your component logic
@@ -462,7 +462,7 @@ export default function Demo() {
 
     try {
       const provider = new ethers.providers.JsonRpcProvider(
-        "https://sepolia.base.org"
+        "https://sepolia.base.org",
       );
 
       // Fetch balances for all projects in parallel
@@ -470,7 +470,7 @@ export default function Demo() {
         const fundContract = new ethers.Contract(
           project.address,
           RegenThemFundABI.abi,
-          provider
+          provider,
         );
 
         const [currentBalance, totalRaised] = await Promise.all([
@@ -485,7 +485,7 @@ export default function Demo() {
           progress: Math.round(
             (Number(ethers.utils.formatUnits(currentBalance, 18)) /
               project.goal) *
-              100
+              100,
           ),
         };
       });
@@ -496,7 +496,7 @@ export default function Demo() {
       setProjects((prev) =>
         prev.map((project) => {
           const update = balanceUpdates.find(
-            (u) => u.address === project.address
+            (u) => u.address === project.address,
           );
           if (update) {
             return {
@@ -507,7 +507,7 @@ export default function Demo() {
             };
           }
           return project;
-        })
+        }),
       );
 
       console.log("Fund balances updated");
