@@ -57,6 +57,9 @@ import FundCard from './FundCard';
 // Import the useMonitorWebSocket hook
 import { useMonitorWebSocket } from '../hooks/useMonitorWebSocket';
 
+// Import the USDC constants
+import { USDC_ADDRESS } from '../constants/addresses';
+
 // Contract addresses - update with your deployed addresses
 const FACTORY_ADDRESS = FactoryABI.contractAddress;
 
@@ -81,6 +84,35 @@ const formSchema = z.object({
   goal: z.preprocess((val) => Number(val), z.number().min(1, { message: "Goal amount must be at least 1." })),
 });
 
+// Add this near your other form schema
+const donationFormSchema = z.object({
+  amount: z.preprocess(
+    (val) => Number(val),
+    z.number().min(0.01, { message: "Amount must be at least 0.01 USDC." })
+  ),
+});
+
+// Add the USDC contract ABI (abbreviated version)
+const USDC_ABI = [
+  {
+    "inputs": [
+      {"name": "_to", "type": "address"},
+      {"name": "_value", "type": "uint256"}
+    ],
+    "name": "transfer",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "account", "type": "address"}],
+    "name": "balanceOf",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
+
 console.log("Factory address:", FACTORY_ADDRESS);
 console.log("Has ABI:", !!FactoryABI.abi);
 
@@ -93,6 +125,9 @@ export default function Demo() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingFunds, setPendingFunds] = useState<{name: string, description: string}[]>([]);
+  const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -132,10 +167,11 @@ export default function Demo() {
     },
   });
 
-  // Form for donating to a project
+  // Update the donationForm initialization with the schema
   const donationForm = useForm({
+    resolver: zodResolver(donationFormSchema),
     defaultValues: {
-      customAmount: 0,
+      amount: 5, // Default preset amount
     },
   });
 
@@ -249,91 +285,43 @@ export default function Demo() {
 
   const handleSupportClick = (project: Project) => {
     setSelectedProject(project);
+    setShowDonateDialog(true);
+    // Reset form with default amount
+    donationForm.reset({ amount: 5 });
   };
 
-  // Implement donate functionality
-  const handleDonate = async (amount: number) => {
-    if (chainId !== config.chains[0].id) {
-      toast.info("Switching to Base Sepolia testnet...");
-      try {
-        await switchChain({ chainId: config.chains[0].id });
-        return;
-      } catch (error) {
-        console.error("Failed to switch network:", error);
-        toast.error("Please switch to Base Sepolia testnet manually");
-        return;
-      }
-    }
-
-    if (!selectedProject || !isConnected) {
-      console.error("Donation attempted without connection or project selection:", {
-        isConnected,
-        selectedProject: selectedProject?.address || "none"
-      });
-      toast.error("Please connect your wallet and select a project");
+  // Add this function to handle donation submission
+  const handleDonateSubmit = async (values: {amount: number}) => {
+    if (!selectedProject || !address) {
+      toast.error("Please connect your wallet first");
       return;
     }
-
+    
     try {
-      const amountInWei = ethers.utils.parseUnits(amount.toString(), 18);
-      console.log("Donating with params:", {
-        projectAddress: selectedProject.address,
-        amount,
-        amountInWei: amountInWei.toString()
+      const amountInWei = ethers.utils.parseUnits(values.amount.toString(), 6); // USDC has 6 decimals
+      
+      console.log("Donating to fund:", selectedProject.name);
+      console.log("Amount:", values.amount, "USDC");
+      
+      // Call the USDC transfer function
+      createFund({
+        address: USDC_ADDRESS as `0x${string}`,
+        abi: USDC_ABI,
+        functionName: 'transfer',
+        args: [selectedProject.address, amountInWei]
       });
       
-      // First approve USDC transfer
-      const provider = new ethers.providers.Web3Provider(window.ethereum as any);
-      const signer = provider.getSigner();
-      
-      // Assuming the USDC token address is stored somewhere
-      const usdcAddress = "0x036CbD53842c5426634e7929541eC2318f3dCF7e"; // Base Sepolia USDC address
-      
-      // Create USDC contract instance
-      const usdcContract = new ethers.Contract(
-        usdcAddress,
-        ["function approve(address spender, uint256 amount) public returns (bool)"], 
-        signer
-      );
-      
-      // Approve the fund contract to spend USDC
-      const approveTx = await usdcContract.approve(selectedProject.address, amountInWei);
-      toast.info("Approving USDC transfer...");
-      await approveTx.wait();
-      
-      // Create fund contract instance
-      const fundContract = new ethers.Contract(
-        selectedProject.address, 
-        RegenThemFundABI.abi, 
-        signer
-      );
-      
-      // Call the fund function
-      const fundTx = await fundContract.fund(amountInWei);
-      toast.info("Processing donation...");
-      await fundTx.wait();
-      
-      toast.success(`Successfully donated ${amount} USDC to ${selectedProject.name}`);
-      
-      // Refresh project data
-      const updatedProject = await fetchFundData(selectedProject.address);
-      if (updatedProject) {
-        setProjects(prev => prev.map(p => 
-          p.address === selectedProject.address ? updatedProject : p
-        ));
-      }
-      
+      toast.success(`Donating ${values.amount} USDC to ${selectedProject.name}`);
+      setShowDonateDialog(false);
     } catch (error) {
       console.error("Error donating:", error);
-      console.error("Donation details:", {
-        projectAddress: selectedProject.address,
-        amount,
-        walletAddress: address
-      });
-      toast.error("Failed to process donation");
+      toast.error("Failed to donate");
     }
-    
-    donationForm.reset();
+  };
+
+  // Add this function to handle preset selection
+  const handlePresetSelect = (amount: number) => {
+    donationForm.setValue('amount', amount);
   };
 
   useEffect(() => {
@@ -469,6 +457,71 @@ export default function Demo() {
   // Then, in your component logic
   const { isWsConnected } = wsHookResult;
 
+  // Keep just the updateBalances function but simplify it
+  const updateBalances = useCallback(async () => {
+    if (projects.length === 0) return;
+    
+    try {
+      const provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
+      
+      // Fetch balances for all projects in parallel
+      const balancePromises = projects.map(async (project) => {
+        const fundContract = new ethers.Contract(
+          project.address,
+          RegenThemFundABI.abi,
+          provider
+        );
+        
+        const [currentBalance, totalRaised] = await Promise.all([
+          fundContract.getCurrentBalance(),
+          fundContract.getTotalRaised()
+        ]);
+        
+        return {
+          address: project.address,
+          currentBalance: Number(ethers.utils.formatUnits(currentBalance, 18)),
+          totalRaised: Number(ethers.utils.formatUnits(totalRaised, 18)),
+          progress: Math.round((Number(ethers.utils.formatUnits(currentBalance, 18)) / project.goal) * 100)
+        };
+      });
+      
+      const balanceUpdates = await Promise.all(balancePromises);
+      
+      // Update individual projects with new balances
+      setProjects(prev => prev.map(project => {
+        const update = balanceUpdates.find(u => u.address === project.address);
+        if (update) {
+          return {
+            ...project,
+            currentBalance: update.currentBalance,
+            totalRaised: update.totalRaised,
+            progress: update.progress
+          };
+        }
+        return project;
+      }));
+      
+      console.log("Fund balances updated");
+    } catch (error) {
+      console.error("Error updating balances:", error);
+    }
+  }, [projects]);
+
+  // Add this effect to refresh balances every 5 seconds
+  useEffect(() => {
+    if (!isConnected) return;
+    
+    // Update immediately
+    updateBalances();
+    
+    // Then update every 5 seconds
+    const intervalId = setInterval(() => {
+      updateBalances();
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, [isConnected, updateBalances]);
+
   if (!isSDKLoaded) {
     return <div>Loading...</div>;
   }
@@ -494,12 +547,7 @@ export default function Demo() {
             {isConnected ? 'Disconnect' : 'Connect Wallet'}
           </Button>
           
-          <Button
-            onClick={addTestFund}
-            className="ml-3 rounded-md px-6 hover:shadow-md transition-all bg-purple-500 text-white"
-          >
-            Add Test Fund
-          </Button>
+      
         </div>
       </div>
 
@@ -648,6 +696,78 @@ export default function Demo() {
           {isWsConnected ? 'Monitor connected' : 'Monitor offline'}
         </span>
       </div>
+
+      {/* Donation Dialog */}
+      <Dialog open={showDonateDialog} onOpenChange={setShowDonateDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Support this Fund</DialogTitle>
+            <DialogDescription>
+              {selectedProject ? (
+                <span>Donate USDC to support <strong>{selectedProject.name}</strong></span>
+              ) : (
+                "Choose an amount to donate"
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...donationForm}>
+            <form onSubmit={donationForm.handleSubmit(handleDonateSubmit)} className="space-y-6">
+              {/* Preset amounts */}
+              <div className="space-y-3">
+                <FormLabel>Choose an amount</FormLabel>
+                <div className="flex flex-wrap gap-2">
+                  {[5, 10, 25].map(amount => (
+                    <Button 
+                      key={amount} 
+                      type="button"
+                      variant={donationForm.getValues('amount') === amount ? "default" : "outline"}
+                      onClick={() => handlePresetSelect(amount)}
+                      className="flex-1"
+                    >
+                      ${amount}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Custom amount */}
+              <FormField
+                control={donationForm.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Custom Amount (USDC)</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <Input type="number" step="0.01" className="pl-7" {...field} />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex justify-between">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowDonateDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                >
+                  Donate
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

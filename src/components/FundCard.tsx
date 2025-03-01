@@ -35,6 +35,10 @@ export default function FundCard({ fund, onSupportClick }: FundCardProps) {
           ${fund.goal.toLocaleString()} goal
         </p>
       </div>
+      <div className="flex items-center justify-end mt-1">
+        <div className="animate-pulse mr-1 w-1.5 h-1.5 rounded-full bg-green-500"></div>
+        <span className="text-xs text-gray-500">Live updates</span>
+      </div>
       <Button 
         onClick={() => onSupportClick(fund)} 
         className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm py-1"
