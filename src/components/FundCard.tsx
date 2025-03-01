@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { Progress } from "./ui/progress";
 import { Button } from "./ui/button";
 import type { FundData } from "../utils/fundDataFetcher";
@@ -12,9 +13,11 @@ export default function FundCard({ fund, onSupportClick }: FundCardProps) {
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800">
       <div className="relative">
-        <img
+        <Image
           src={fund.image}
           alt={fund.name}
+          width={400}
+          height={200}
           className="w-full h-48 object-cover rounded-lg mb-3"
         />
         <div className="absolute top-2 right-2 bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
