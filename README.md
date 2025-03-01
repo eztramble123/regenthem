@@ -1,37 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Regenthem - Seamless Fundraising Platform - give back to those that need it most
+
+Regenthem is a decentralized fundraising platform built on Ethereum that allows users to create and contribute to fundraising campaigns using USDC tokens. The platform provides a seamless integration between blockchain smart contracts and a modern web interface.
+
+## Why
+
+rizz
+
+## Overview
+
+Regenthem consists of:
+
+- **Smart Contracts**: Ethereum-based contracts for managing fundraising campaigns
+- **Web Interface**: A Next.js application providing an intuitive UI for creating and contributing to campaigns
+
+## Features
+
+- Create fundraising campaigns with custom names, descriptions, and target goals
+- Contribute USDC tokens to existing campaigns
+- Track campaign progress and funding statistics
+- Withdraw funds once targets are reached (campaign owners only)
+- Web3 wallet integration for secure transactions
+
+## Tech Stack
+
+### Frontend
+
+- OnchainKit & Coinbase SDK
+- Farcaster Frame SDK
+- Next.js
+- React
+- Wagmi (Ethereum hooks)
+- TypeScript
+- TailwindCSS
+- shadcn/ui components
+
+### Backend/Blockchain
+
+- Solidity smart contracts
+- Foundry
+- ERC20 token integration (USDC)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js (v16+)
+- npm or yarn
+- Metamask or other Web3 wallet
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/eztramble123/regenthem/tree/main
+cd regenthem
+
+# Install dependencies
+npm install
+# or
+yarn install
+
+# Start the development server
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Smart Contract Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The smart contracts are located in the `backend/contracts` directory and use Foundry for development:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd backend/contracts
 
-## Learn More
+# Build contracts
+forge build
 
-To learn more about Next.js, take a look at the following resources:
+# Run tests
+forge test
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Deploy (requires configuration)
+forge script script/Deploy.s.sol:DeployScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## How It Works
 
-## Deploy on Vercel
+1. Users connect their Web3 wallet to the application
+2. Campaign creators can define new fundraising projects with goals
+3. Contributors can browse available campaigns and donate USDC
+4. Smart contracts manage the funds securely on-chain
+5. Campaign owners can withdraw funds when goals are reached
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# regenthem
+- `/src`: Frontend application code
+  - `/app`: Next.js application pages
+  - `/components`: Reusable UI components
+  - `/contracts`: Contract ABIs
+  - `/lib`: Utility functions
+  - `/types`: TypeScript type definitions
+- `/backend`: Smart contract code
+  - `/contracts`: Solidity smart contracts
+    - `/src`: Contract source code
+    - `/test`: Contract tests
