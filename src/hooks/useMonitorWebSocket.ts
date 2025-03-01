@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { FundData, fetchFundData } from "../utils/fundDataFetcher";
 
 // Add this at the top of your file, outside the hook
-let activeConnection = null;
+let activeConnection: WebSocket | null = null;
 let connectionAttemptTime = 0;
 const MIN_RECONNECT_INTERVAL = 5000; // 5 seconds
 
@@ -11,7 +11,6 @@ export function useMonitorWebSocket(
   setProjects: React.Dispatch<React.SetStateAction<FundData[]>>,
   addToast: (message: string) => void,
 ) {
-  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isWsConnected, setIsWsConnected] = useState(false);
 
   useEffect(() => {
@@ -19,39 +18,50 @@ export function useMonitorWebSocket(
 
     // Prevent frequent reconnection attempts
     const now = Date.now();
-    if (now - connectionAttemptTime < MIN_RECONNECT_INTERVAL) {
-      console.log("Throttling connection attempts");
+    if (
+      now - connectionAttemptTime < MIN_RECONNECT_INTERVAL &&
+      !activeConnection
+    ) {
+      console.log("Skipping connection attempt (too frequent)");
       return;
     }
 
     connectionAttemptTime = now;
 
-    // Only create a new connection if there isn't one already
     if (activeConnection) {
       console.log("Using existing WebSocket connection");
-      setSocket(activeConnection);
       setIsWsConnected(true);
       return;
     }
 
     console.log("Creating new WebSocket connection");
-    const ws = new WebSocket("ws://localhost:3001");
-    activeConnection = ws;
+    const ws = new WebSocket("wss://your-websocket-server.com");
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed");
+      activeConnection = null;
+      setIsWsConnected(false);
+    };
 
     // Define processMessage inside useEffect to prevent stale closures
-    const processMessage = async (message) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processMessage = async (message: any) => {
       if (message.type === "new_fund") {
         // Handle new fund creation
-        const { address, name } = message.data;
-        addToast(`New fund created: ${name}`);
+        addToast(`New fund detected: ${message.data?.name}`);
 
-        // Fetch the fund data
-        const fundData = await fetchFundData(address);
-        if (fundData) {
-          setProjects((prev) => {
-            if (prev.some((p) => p.address === address)) return prev;
-            return [...prev, fundData];
-          });
+        if (message.fundAddress) {
+          const newFundData = await fetchFundData(message.fundAddress);
+          if (newFundData) {
+            setProjects((prev) => {
+              // Avoid duplicates
+              const exists = prev.some(
+                (p) => p.address === message.fundAddress,
+              );
+              if (exists) return prev;
+              return [...prev, newFundData];
+            });
+          }
         }
       } else if (message.type === "connection_status") {
         console.log("Monitor connection status:", message.data.connected);
@@ -91,13 +101,6 @@ export function useMonitorWebSocket(
       console.error("WebSocket error:", error);
       setIsWsConnected(false);
     };
-
-    ws.onclose = () => {
-      console.log("Disconnected from monitor server");
-      setIsWsConnected(false);
-    };
-
-    setSocket(ws);
 
     return () => {
       // Only close if we're unmounting the app completely
