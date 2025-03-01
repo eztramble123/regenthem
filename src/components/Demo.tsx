@@ -565,16 +565,24 @@ export default function Demo() {
 
       {/* Rotating ad banner */}
       <div className="overflow-hidden py-2 mb-4 bg-gradient-to-r from-green-500 to-blue-500 rounded-md relative">
-        <div 
+        <div
           className="whitespace-nowrap inline-block"
           style={{
-            animation: 'scroll-x 20s linear infinite',
+            animation: "scroll-x 20s linear infinite",
           }}
         >
-          <span className="text-white font-medium px-4">🌱 Plant a tree with every donation</span>
-          <span className="text-white font-medium px-4">💚 Every USDC makes a difference</span>
-          <span className="text-white font-medium px-4">🌿 Support regenerative projects today</span>
-          <span className="text-white font-medium px-4">🌱 Plant a tree with every donation</span>
+          <span className="text-white font-medium px-4">
+            🌱 Plant a tree with every donation
+          </span>
+          <span className="text-white font-medium px-4">
+            💚 Every USDC makes a difference
+          </span>
+          <span className="text-white font-medium px-4">
+            🌿 Support regenerative projects today
+          </span>
+          <span className="text-white font-medium px-4">
+            🌱 Plant a tree with every donation
+          </span>
         </div>
       </div>
 
