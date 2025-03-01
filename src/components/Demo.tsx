@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from "react";
-import sdk, { type Context } from "@farcaster/frame-sdk";
+import sdk from "@farcaster/frame-sdk";
 import { FundButton } from "@coinbase/onchainkit/fund";
 import { Plus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,21 +10,17 @@ import { ethers } from "ethers";
 
 import {
   useAccount,
-  useSendTransaction,
-  useSignMessage,
   useWaitForTransactionReceipt,
   useDisconnect,
   useConnect,
   useContractRead,
   useWriteContract,
-  useContractReads,
   useChainId,
   useSwitchChain,
 } from "wagmi";
 
 import { config } from "../components/providers/WagmiProvider";
 import { Button } from "./ui/button";
-import { Progress } from "./ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +32,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -50,11 +45,7 @@ import FactoryABI from "../contracts/RegenThemFundFactory.json";
 import RegenThemFundABI from "../contracts/RegenThemFund.json";
 
 // Import the fund fetcher utilities
-import {
-  loadAllFundsData,
-  fetchFundData,
-  debugContract,
-} from "../utils/fundDataFetcher";
+import { fetchFundData, debugContract } from "../utils/fundDataFetcher";
 import FundCard from "./FundCard";
 
 // Import the useMonitorWebSocket hook
@@ -128,30 +119,25 @@ console.log("Has ABI:", !!FactoryABI.abi);
 
 export default function Demo() {
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
-  const [context, setContext] = useState<Context.FrameContext>();
-  const [isContextOpen, setIsContextOpen] = useState(false);
-  const [txHash, setTxHash] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [pendingFunds, setPendingFunds] = useState<
     { name: string; description: string }[]
   >([]);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
-  const [totalBalance, setTotalBalance] = useState<number>(0);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
 
   // Read all funds from factory contract
-  const { data: fundAddresses } = useContractRead({
+  useContractRead({
     address: FACTORY_ADDRESS as `0x${string}`,
     abi: FactoryABI.abi,
     functionName: "getRegenThemFundContracts",
     chainId: config.chains[0].id,
-  }) as { data: string[] | undefined };
+  });
 
   // Replace the deprecated hook
   const {
@@ -161,7 +147,7 @@ export default function Demo() {
   } = useWriteContract();
 
   // Track transaction status if needed
-  const { isLoading: isConfirmingFund } = useWaitForTransactionReceipt({
+  useWaitForTransactionReceipt({
     hash: createFundTxHash,
   });
 
@@ -197,7 +183,7 @@ export default function Demo() {
   useEffect(() => {
     // Skip the loadFundsData call
     // This was causing the issues with existing contracts
-  }, [loadFundsData]);
+  }, []);
 
   // Also remove the refresh interval
   useEffect(() => {
@@ -302,7 +288,7 @@ export default function Demo() {
     const interval = setInterval(checkReceipt, 3000);
 
     return () => clearInterval(interval);
-  }, [createFundTxHash]);
+  }, [createFundTxHash, loadFundsData]); // Added loadFundsData to dependency array
 
   const handleSupportClick = (project: Project) => {
     setSelectedProject(project);
@@ -349,8 +335,7 @@ export default function Demo() {
 
   useEffect(() => {
     const load = async () => {
-      setContext(await sdk.context);
-      sdk.actions.ready();
+      await sdk.actions.ready();
     };
     if (sdk && !isSDKLoaded) {
       setIsSDKLoaded(true);
@@ -382,7 +367,7 @@ export default function Demo() {
         // Add more logging to catch the event
         factoryContract.on(
           "RegenThemFundCreated",
-          async (owner, fundAddress, name, goalAmount, event) => {
+          async (owner, fundAddress, name, goalAmount) => {
             console.log("FRONTEND EVENT DETECTED! Fund created:", {
               owner,
               fundAddress,
@@ -460,24 +445,6 @@ export default function Demo() {
     runDebug();
     // Empty dependency array means this only runs once when component mounts
   }, []);
-
-  // Add this manual fund creation for testing
-  const addTestFund = () => {
-    const testFund = {
-      address: "0x1234567890123456789012345678901234567890",
-      name: "Test Fund",
-      description: "This is a test fund for debugging",
-      image: "https://picsum.photos/seed/test/400/300",
-      goal: 1000,
-      currentBalance: 250,
-      totalRaised: 250,
-      progress: 25,
-      owner: address || "0x0000000000000000000000000000000000000000",
-    };
-
-    setProjects((prev) => [...prev, testFund]);
-    console.log("Added test fund to UI");
-  };
 
   // Near the top of your component, outside any render logic
   const wsHookResult = useMonitorWebSocket(
@@ -596,7 +563,7 @@ export default function Demo() {
         </p>
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-            Don't have crypto? Fund with your card
+            Don&apos;t have crypto? Fund with your card
           </p>
           <span className="mr-3 text-primary">→</span>
           <FundButton className="bg-primary hover:bg-primary/90 rounded-md py-2 px-4 text-white font-medium transition-colors duration-200" />
