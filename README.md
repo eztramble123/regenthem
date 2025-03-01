@@ -1,6 +1,6 @@
 # Regenthem - Seamless Fundraising Platform - give back to those that need it most
 
-Regenthem is a decentralized fundraising platform built on Ethereum that allows users to create and contribute to fundraising campaigns using USDC tokens. The platform provides a seamless integration between blockchain smart contracts and a modern web interface.
+Regenthem is a decentralized fundraising platform built on Base that allows users to create and contribute to fundraising campaigns using USDC tokens. The platform provides a seamless integration between blockchain smart contracts and a modern web interface.
 
 ## Why
 
@@ -10,7 +10,7 @@ rizz
 
 Regenthem consists of:
 
-- **Smart Contracts**: Ethereum-based contracts for managing fundraising campaigns
+- **Smart Contracts**: contracts for managing fundraising campaigns
 - **Web Interface**: A Next.js application providing an intuitive UI for creating and contributing to campaigns
 
 ## Features
@@ -29,12 +29,12 @@ Regenthem consists of:
 - Farcaster Frame SDK
 - Next.js
 - React
-- Wagmi (Ethereum hooks)
+- Wagmi
 - TypeScript
 - TailwindCSS
 - shadcn/ui components
 
-### Backend/Blockchain
+### Backend
 
 - Solidity smart contracts
 - Foundry
