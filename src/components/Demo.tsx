@@ -299,7 +299,7 @@ export default function Demo() {
 
       // First approve USDC transfer
       const provider = new ethers.providers.Web3Provider(
-        window.ethereum as any,
+        window.ethereum as ethers.providers.ExternalProvider,
       );
       const signer = provider.getSigner();
 
@@ -542,7 +542,7 @@ export default function Demo() {
         </p>
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-            Don't have crypto? Fund with your card
+            Don&apos;t have crypto? Fund with your card
           </p>
           <span className="mr-3 text-primary">→</span>
           <FundButton className="bg-primary hover:bg-primary/90 rounded-md py-2 px-4 text-white font-medium transition-colors duration-200" />
