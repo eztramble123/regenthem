@@ -1,18 +1,17 @@
-import { useEffect, useCallback, useState } from 'react';
-import sdk, { type Context } from '@farcaster/frame-sdk';
-import { FundButton } from '@coinbase/onchainkit/fund';
-import { Plus } from 'lucide-react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { useEffect, useCallback, useState } from "react";
+import sdk, { type Context } from "@farcaster/frame-sdk";
+import { FundButton } from "@coinbase/onchainkit/fund";
+import { Plus } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { toast } from "sonner";
-import { ethers } from 'ethers';
+import { ethers } from "ethers";
 
 import {
   useAccount,
   useSendTransaction,
   useSignMessage,
-  useSignTypedData,
   useWaitForTransactionReceipt,
   useDisconnect,
   useConnect,
@@ -21,11 +20,11 @@ import {
   useContractReads,
   useChainId,
   useSwitchChain,
-} from 'wagmi';
+} from "wagmi";
 
-import { config } from '../components/providers/WagmiProvider';
-import { Button } from './ui/button';
-import { Progress } from './ui/progress';
+import { config } from "../components/providers/WagmiProvider";
+import { Button } from "./ui/button";
+import { Progress } from "./ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -47,18 +46,22 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 // Import contract ABIs
-import FactoryABI from '../contracts/RegenThemFundFactory.json';
-import RegenThemFundABI from '../contracts/RegenThemFund.json';
+import FactoryABI from "../contracts/RegenThemFundFactory.json";
+import RegenThemFundABI from "../contracts/RegenThemFund.json";
 
 // Import the fund fetcher utilities
-import { loadAllFundsData, fetchFundData, debugContract } from '../utils/fundDataFetcher';
-import FundCard from './FundCard';
+import {
+  loadAllFundsData,
+  fetchFundData,
+  debugContract,
+} from "../utils/fundDataFetcher";
+import FundCard from "./FundCard";
 
 // Import the useMonitorWebSocket hook
-import { useMonitorWebSocket } from '../hooks/useMonitorWebSocket';
+import { useMonitorWebSocket } from "../hooks/useMonitorWebSocket";
 
 // Import the USDC constants
-import { USDC_ADDRESS } from '../constants/addresses';
+import { USDC_ADDRESS } from "../constants/addresses";
 
 // Contract addresses - update with your deployed addresses
 const FACTORY_ADDRESS = FactoryABI.contractAddress;
@@ -78,10 +81,17 @@ interface Project {
 
 // Define the form schema using zod
 const formSchema = z.object({
-  name: z.string().min(2, { message: "Fund Name must be at least 2 characters." }),
-  description: z.string().min(10, { message: "Description must be at least 10 characters." }),
+  name: z
+    .string()
+    .min(2, { message: "Fund Name must be at least 2 characters." }),
+  description: z
+    .string()
+    .min(10, { message: "Description must be at least 10 characters." }),
   image: z.string().url({ message: "Image must be a valid URL." }),
-  goal: z.preprocess((val) => Number(val), z.number().min(1, { message: "Goal amount must be at least 1." })),
+  goal: z.preprocess(
+    (val) => Number(val),
+    z.number().min(1, { message: "Goal amount must be at least 1." })
+  ),
 });
 
 // Add this near your other form schema
@@ -95,22 +105,22 @@ const donationFormSchema = z.object({
 // Add the USDC contract ABI (abbreviated version)
 const USDC_ABI = [
   {
-    "inputs": [
-      {"name": "_to", "type": "address"},
-      {"name": "_value", "type": "uint256"}
+    inputs: [
+      { name: "_to", type: "address" },
+      { name: "_value", type: "uint256" },
     ],
-    "name": "transfer",
-    "outputs": [{"name": "", "type": "bool"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "transfer",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [{"name": "account", "type": "address"}],
-    "name": "balanceOf",
-    "outputs": [{"name": "", "type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  }
+    inputs: [{ name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ];
 
 console.log("Factory address:", FACTORY_ADDRESS);
@@ -124,7 +134,9 @@ export default function Demo() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingFunds, setPendingFunds] = useState<{name: string, description: string}[]>([]);
+  const [pendingFunds, setPendingFunds] = useState<
+    { name: string; description: string }[]
+  >([]);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [totalBalance, setTotalBalance] = useState<number>(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -137,15 +149,15 @@ export default function Demo() {
   const { data: fundAddresses } = useContractRead({
     address: FACTORY_ADDRESS as `0x${string}`,
     abi: FactoryABI.abi,
-    functionName: 'getRegenThemFundContracts',
+    functionName: "getRegenThemFundContracts",
     chainId: config.chains[0].id,
   }) as { data: string[] | undefined };
 
   // Replace the deprecated hook
-  const { 
-    writeContract: createFund, 
+  const {
+    writeContract: createFund,
     isPending: isCreatingFund,
-    data: createFundTxHash
+    data: createFundTxHash,
   } = useWriteContract();
 
   // Track transaction status if needed
@@ -160,9 +172,9 @@ export default function Demo() {
   const projectForm = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      image: '',
+      name: "",
+      description: "",
+      image: "",
       goal: 1,
     },
   });
@@ -190,17 +202,21 @@ export default function Demo() {
   // Also remove the refresh interval
   useEffect(() => {
     if (!isConnected) return;
-    
+
     // Instead of setting up interval to load all funds,
     // we just rely on the WebSocket for new funds
-    
+
     return () => {
       // No cleanup needed
     };
   }, [isConnected]);
 
   // Update your submit function to use the new pattern
-  const onSubmitProject = async (values: { goal: { toString: () => string; }; name: unknown; description: unknown; }) => {
+  const onSubmitProject = async (values: {
+    goal: { toString: () => string };
+    name: unknown;
+    description: unknown;
+  }) => {
     // Check if on the correct network
     if (chainId !== config.chains[0].id) {
       toast.info("Switching to Base Sepolia testnet...");
@@ -217,30 +233,33 @@ export default function Demo() {
 
     try {
       const goalInWei = ethers.utils.parseUnits(values.goal.toString(), 18);
-      
+
       console.log("Creating fund with params:", {
         address: FACTORY_ADDRESS,
         name: values.name,
         description: values.description,
-        goalInWei: goalInWei.toString()
+        goalInWei: goalInWei.toString(),
       });
-      
+
       // Call the contract to create a fund
       createFund({
         address: FACTORY_ADDRESS as `0x${string}`,
         abi: FactoryABI.abi,
-        functionName: 'createRegenThemFund',
-        args: [values.name, values.description, goalInWei]
+        functionName: "createRegenThemFund",
+        args: [values.name, values.description, goalInWei],
       });
-      
+
       // Add this pending fund to show it's in progress
-      setPendingFunds(prev => [...prev, {
-        name: values.name as string, 
-        description: values.description as string
-      }]);
-      
+      setPendingFunds((prev) => [
+        ...prev,
+        {
+          name: values.name as string,
+          description: values.description as string,
+        },
+      ]);
+
       toast.success("Creating fund... please confirm transaction");
-      
+
       // Reset form after submission
       projectForm.reset();
     } catch (error) {
@@ -254,20 +273,22 @@ export default function Demo() {
   // Update this effect to properly handle transaction receipt
   useEffect(() => {
     if (!createFundTxHash) return;
-    
+
     console.log("Detected new transaction:", createFundTxHash);
-    
+
     const checkReceipt = async () => {
       try {
-        const provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
+        const provider = new ethers.providers.JsonRpcProvider(
+          "https://sepolia.base.org"
+        );
         const receipt = await provider.getTransactionReceipt(createFundTxHash);
-        
+
         if (receipt && receipt.confirmations > 0) {
           console.log("Transaction confirmed:", receipt);
-          
+
           // Force reload all funds data
           loadFundsData();
-          
+
           // Clear pending funds after successful transaction
           setPendingFunds([]);
         }
@@ -275,11 +296,11 @@ export default function Demo() {
         console.error("Error checking receipt:", error);
       }
     };
-    
+
     // Check immediately and then every 3 seconds
     checkReceipt();
     const interval = setInterval(checkReceipt, 3000);
-    
+
     return () => clearInterval(interval);
   }, [createFundTxHash]);
 
@@ -291,27 +312,29 @@ export default function Demo() {
   };
 
   // Add this function to handle donation submission
-  const handleDonateSubmit = async (values: {amount: number}) => {
+  const handleDonateSubmit = async (values: { amount: number }) => {
     if (!selectedProject || !address) {
       toast.error("Please connect your wallet first");
       return;
     }
-    
+
     try {
       const amountInWei = ethers.utils.parseUnits(values.amount.toString(), 6); // USDC has 6 decimals
-      
+
       console.log("Donating to fund:", selectedProject.name);
       console.log("Amount:", values.amount, "USDC");
-      
+
       // Call the USDC transfer function
       createFund({
         address: USDC_ADDRESS as `0x${string}`,
         abi: USDC_ABI,
-        functionName: 'transfer',
-        args: [selectedProject.address, amountInWei]
+        functionName: "transfer",
+        args: [selectedProject.address, amountInWei],
       });
-      
-      toast.success(`Donating ${values.amount} USDC to ${selectedProject.name}`);
+
+      toast.success(
+        `Donating ${values.amount} USDC to ${selectedProject.name}`
+      );
       setShowDonateDialog(false);
     } catch (error) {
       console.error("Error donating:", error);
@@ -321,7 +344,7 @@ export default function Demo() {
 
   // Add this function to handle preset selection
   const handlePresetSelect = (amount: number) => {
-    donationForm.setValue('amount', amount);
+    donationForm.setValue("amount", amount);
   };
 
   useEffect(() => {
@@ -338,48 +361,53 @@ export default function Demo() {
   // Make sure this event listener is properly detecting events
   useEffect(() => {
     if (!isConnected) return;
-    
+
     const listenToFundEvents = async () => {
       try {
         // Important: Use JsonRpcProvider instead of Web3Provider for event monitoring
-        const provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
-        
+        const provider = new ethers.providers.JsonRpcProvider(
+          "https://sepolia.base.org"
+        );
+
         const factoryContract = new ethers.Contract(
           FACTORY_ADDRESS,
           FactoryABI.abi,
           provider
         );
-        
-        console.log("FRONTEND: Setting up event listener for RegenThemFundCreated");
-        
+
+        console.log(
+          "FRONTEND: Setting up event listener for RegenThemFundCreated"
+        );
+
         // Add more logging to catch the event
-        factoryContract.on("RegenThemFundCreated", 
+        factoryContract.on(
+          "RegenThemFundCreated",
           async (owner, fundAddress, name, goalAmount, event) => {
             console.log("FRONTEND EVENT DETECTED! Fund created:", {
               owner,
               fundAddress,
               name,
-              goalAmount: ethers.utils.formatUnits(goalAmount, 18)
+              goalAmount: ethers.utils.formatUnits(goalAmount, 18),
             });
-            
+
             // Get the full fund data immediately
             const newFundData = await fetchFundData(fundAddress);
             console.log("New fund data fetched:", newFundData);
-            
+
             if (newFundData) {
               toast.success(`New fund "${name}" was created!`);
-              
+
               // Update the projects state with the new fund
-              setProjects(prev => {
+              setProjects((prev) => {
                 // Make sure we don't add duplicates
-                const exists = prev.some(p => p.address === fundAddress);
+                const exists = prev.some((p) => p.address === fundAddress);
                 if (exists) return prev;
                 return [...prev, newFundData];
               });
             }
           }
         );
-        
+
         return () => {
           console.log("Removing event listeners");
           factoryContract.removeAllListeners("RegenThemFundCreated");
@@ -388,22 +416,22 @@ export default function Demo() {
         console.error("Error setting up event listener:", error);
       }
     };
-    
+
     listenToFundEvents();
   }, [isConnected]);
 
   // Add this effect to periodically refresh the funds list
   useEffect(() => {
     if (!isConnected) return;
-    
+
     console.log("Setting up refresh interval");
-    
+
     // Refresh every 15 seconds
     const intervalId = setInterval(() => {
       console.log("Interval refresh triggered");
       loadFundsData();
     }, 15000);
-    
+
     return () => {
       console.log("Clearing refresh interval");
       clearInterval(intervalId);
@@ -416,14 +444,18 @@ export default function Demo() {
       console.log("Running contract debug...");
       const result = await debugContract();
       console.log("Debug result:", result);
-      
+
       if (result.success && result.funds && result.funds.length > 0) {
-        console.log("Funds found but not showing in UI. This suggests a display issue.");
+        console.log(
+          "Funds found but not showing in UI. This suggests a display issue."
+        );
       } else {
-        console.log("No funds found in contract. This suggests a contract or connection issue.");
+        console.log(
+          "No funds found in contract. This suggests a contract or connection issue."
+        );
       }
     };
-    
+
     // Only run this once at component mount, not on every render
     runDebug();
     // Empty dependency array means this only runs once when component mounts
@@ -440,10 +472,10 @@ export default function Demo() {
       currentBalance: 250,
       totalRaised: 250,
       progress: 25,
-      owner: address || "0x0000000000000000000000000000000000000000"
+      owner: address || "0x0000000000000000000000000000000000000000",
     };
-    
-    setProjects(prev => [...prev, testFund]);
+
+    setProjects((prev) => [...prev, testFund]);
     console.log("Added test fund to UI");
   };
 
@@ -460,10 +492,12 @@ export default function Demo() {
   // Keep just the updateBalances function but simplify it
   const updateBalances = useCallback(async () => {
     if (projects.length === 0) return;
-    
+
     try {
-      const provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
-      
+      const provider = new ethers.providers.JsonRpcProvider(
+        "https://sepolia.base.org"
+      );
+
       // Fetch balances for all projects in parallel
       const balancePromises = projects.map(async (project) => {
         const fundContract = new ethers.Contract(
@@ -471,36 +505,44 @@ export default function Demo() {
           RegenThemFundABI.abi,
           provider
         );
-        
+
         const [currentBalance, totalRaised] = await Promise.all([
           fundContract.getCurrentBalance(),
-          fundContract.getTotalRaised()
+          fundContract.getTotalRaised(),
         ]);
-        
+
         return {
           address: project.address,
           currentBalance: Number(ethers.utils.formatUnits(currentBalance, 18)),
           totalRaised: Number(ethers.utils.formatUnits(totalRaised, 18)),
-          progress: Math.round((Number(ethers.utils.formatUnits(currentBalance, 18)) / project.goal) * 100)
+          progress: Math.round(
+            (Number(ethers.utils.formatUnits(currentBalance, 18)) /
+              project.goal) *
+              100
+          ),
         };
       });
-      
+
       const balanceUpdates = await Promise.all(balancePromises);
-      
+
       // Update individual projects with new balances
-      setProjects(prev => prev.map(project => {
-        const update = balanceUpdates.find(u => u.address === project.address);
-        if (update) {
-          return {
-            ...project,
-            currentBalance: update.currentBalance,
-            totalRaised: update.totalRaised,
-            progress: update.progress
-          };
-        }
-        return project;
-      }));
-      
+      setProjects((prev) =>
+        prev.map((project) => {
+          const update = balanceUpdates.find(
+            (u) => u.address === project.address
+          );
+          if (update) {
+            return {
+              ...project,
+              currentBalance: update.currentBalance,
+              totalRaised: update.totalRaised,
+              progress: update.progress,
+            };
+          }
+          return project;
+        })
+      );
+
       console.log("Fund balances updated");
     } catch (error) {
       console.error("Error updating balances:", error);
@@ -510,15 +552,15 @@ export default function Demo() {
   // Add this effect to refresh balances every 5 seconds
   useEffect(() => {
     if (!isConnected) return;
-    
+
     // Update immediately
     updateBalances();
-    
+
     // Then update every 5 seconds
     const intervalId = setInterval(() => {
       updateBalances();
     }, 5000);
-    
+
     return () => clearInterval(intervalId);
   }, [isConnected, updateBalances]);
 
@@ -529,13 +571,12 @@ export default function Demo() {
   return (
     <div className="w-full max-w-[800px] mx-auto py-8 px-4 bg-white dark:bg-gray-900 rounded-xl shadow-sm">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">RegenThem</h1>
-        
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
+          RegenThem
+        </h1>
+
         {/* Add the monitor indicator next to the heading */}
         <div className="flex items-center">
-         
-         
-        
           <Button
             onClick={() =>
               isConnected
@@ -544,17 +585,14 @@ export default function Demo() {
             }
             className="rounded-md px-6 hover:shadow-md transition-all"
           >
-            {isConnected ? 'Disconnect' : 'Connect Wallet'}
+            {isConnected ? "Disconnect" : "Connect Wallet"}
           </Button>
-          
-      
         </div>
       </div>
 
       <div className="mb-8 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
         <p className="text-md text-gray-700 dark:text-gray-300 leading-relaxed">
-          Regular people, real impact.
-          Connect, click, give.
+          Regular people, real impact. Connect, click, give.
         </p>
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
@@ -572,31 +610,32 @@ export default function Demo() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {projects.map((project, index) => (
-            <FundCard 
-              key={index} 
-              fund={project} 
-              onSupportClick={handleSupportClick} 
+            <FundCard
+              key={index}
+              fund={project}
+              onSupportClick={handleSupportClick}
             />
           ))}
         </div>
       )}
 
       {pendingFunds.map((fund, index) => (
-        <div key={`pending-${index}`} className="rounded-xl border border-gray-200 p-4 bg-white opacity-60">
+        <div
+          key={`pending-${index}`}
+          className="rounded-xl border border-gray-200 p-4 bg-white opacity-60"
+        >
           <div className="animate-pulse">
             <div className="bg-gray-200 h-48 rounded-lg mb-3"></div>
-            <h3 className="font-semibold text-lg mb-1">{fund.name} (Creating...)</h3>
+            <h3 className="font-semibold text-lg mb-1">
+              {fund.name} (Creating...)
+            </h3>
             <p className="text-sm text-gray-600 mb-4 line-clamp-2 h-10">
               {fund.description}
             </p>
             <div className="h-2.5 bg-gray-200 rounded-full mb-2"></div>
             <div className="flex justify-between items-center">
-              <p className="text-xs text-gray-500">
-                $0 raised
-              </p>
-              <p className="text-xs font-medium text-green-600">
-                Pending...
-              </p>
+              <p className="text-xs text-gray-500">$0 raised</p>
+              <p className="text-xs font-medium text-green-600">Pending...</p>
             </div>
           </div>
         </div>
@@ -606,7 +645,7 @@ export default function Demo() {
       <div className="fixed bottom-6 right-6 z-50">
         <Dialog>
           <DialogTrigger asChild>
-            <Button 
+            <Button
               className="h-14 w-14 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg flex items-center justify-center"
               aria-label="Create new project"
             >
@@ -617,11 +656,15 @@ export default function Demo() {
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
               <DialogDescription>
-                Start a new regenerative project to help the planet and your community.
+                Start a new regenerative project to help the planet and your
+                community.
               </DialogDescription>
             </DialogHeader>
             <Form {...projectForm}>
-              <form onSubmit={projectForm.handleSubmit(onSubmitProject)} className="space-y-4">
+              <form
+                onSubmit={projectForm.handleSubmit(onSubmitProject)}
+                className="space-y-4"
+              >
                 <FormField
                   control={projectForm.control}
                   name="name"
@@ -668,18 +711,22 @@ export default function Demo() {
                     <FormItem>
                       <FormLabel>Goal Amount</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="Enter goal amount" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="Enter goal amount"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="bg-green-500 hover:bg-green-600 text-white"
                   disabled={isCreatingFund}
                 >
-                  {isCreatingFund ? 'Creating...' : 'Publish'}
+                  {isCreatingFund ? "Creating..." : "Publish"}
                 </Button>
               </form>
             </Form>
@@ -689,11 +736,11 @@ export default function Demo() {
 
       {/* Move the WebSocket status indicator to a fixed position in the corner */}
       <div className="fixed bottom-6 left-6 flex items-center bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full shadow-md z-40 opacity-70 hover:opacity-100 transition-opacity">
-        <div 
-          className={`w-2 h-2 rounded-full mr-2 ${isWsConnected ? 'bg-green-500' : 'bg-red-500'}`}
+        <div
+          className={`w-2 h-2 rounded-full mr-2 ${isWsConnected ? "bg-green-500" : "bg-red-500"}`}
         ></div>
         <span className="text-xs text-gray-500">
-          {isWsConnected ? 'Monitor connected' : 'Monitor offline'}
+          {isWsConnected ? "Monitor connected" : "Monitor offline"}
         </span>
       </div>
 
@@ -704,24 +751,33 @@ export default function Demo() {
             <DialogTitle>Support this Fund</DialogTitle>
             <DialogDescription>
               {selectedProject ? (
-                <span>Donate USDC to support <strong>{selectedProject.name}</strong></span>
+                <span>
+                  Donate USDC to support <strong>{selectedProject.name}</strong>
+                </span>
               ) : (
                 "Choose an amount to donate"
               )}
             </DialogDescription>
           </DialogHeader>
-          
+
           <Form {...donationForm}>
-            <form onSubmit={donationForm.handleSubmit(handleDonateSubmit)} className="space-y-6">
+            <form
+              onSubmit={donationForm.handleSubmit(handleDonateSubmit)}
+              className="space-y-6"
+            >
               {/* Preset amounts */}
               <div className="space-y-3">
                 <FormLabel>Choose an amount</FormLabel>
                 <div className="flex flex-wrap gap-2">
-                  {[5, 10, 25].map(amount => (
-                    <Button 
-                      key={amount} 
+                  {[5, 10, 25].map((amount) => (
+                    <Button
+                      key={amount}
                       type="button"
-                      variant={donationForm.getValues('amount') === amount ? "default" : "outline"}
+                      variant={
+                        donationForm.getValues("amount") === amount
+                          ? "default"
+                          : "outline"
+                      }
                       onClick={() => handlePresetSelect(amount)}
                       className="flex-1"
                     >
@@ -730,7 +786,7 @@ export default function Demo() {
                   ))}
                 </div>
               </div>
-              
+
               {/* Custom amount */}
               <FormField
                 control={donationForm.control}
@@ -740,25 +796,32 @@ export default function Demo() {
                     <FormLabel>Custom Amount (USDC)</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                        <Input type="number" step="0.01" className="pl-7" {...field} />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                          $
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="pl-7"
+                          {...field}
+                        />
                       </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <div className="flex justify-between">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setShowDonateDialog(false)}
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="bg-green-500 hover:bg-green-600 text-white"
                 >
                   Donate
