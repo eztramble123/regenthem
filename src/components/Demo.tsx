@@ -52,6 +52,7 @@ import { useMonitorWebSocket } from "../hooks/useMonitorWebSocket";
 
 // Import the USDC constants
 import { USDC_ADDRESS } from "../constants/addresses";
+import Image from "next/image";
 
 // Contract addresses - update with your deployed addresses
 const FACTORY_ADDRESS = FactoryABI.contractAddress;
@@ -544,9 +545,18 @@ export default function Demo() {
   return (
     <div className="w-full max-w-[800px] mx-auto py-8 px-4 bg-white dark:bg-gray-900 rounded-xl shadow-sm">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
-          RegenThem
-        </h1>
+        <div className="flex items-center">
+          <Image
+            src="/logo.png"
+            alt="RegenThem Logo"
+            width={50}
+            height={50}
+            className="rounded-md mr-2"
+          />
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
+            RegenThem
+          </h1>
+        </div>
 
         {/* Add the monitor indicator next to the heading */}
         <div className="flex items-center">
@@ -601,7 +611,7 @@ export default function Demo() {
         <p className="text-md text-gray-700 dark:text-gray-300 leading-relaxed">
           Regular people, real impact. Connect, click, give.
         </p>
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center justify-end mt-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
             Don&apos;t have crypto? Fund with your card
           </p>
