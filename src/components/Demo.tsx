@@ -457,40 +457,53 @@ export default function Demo() {
   // Then, in your component logic
   const { isWsConnected } = wsHookResult;
 
-  // Keep just the updateBalances function but simplify it
+  // Update the updateBalances function to properly handle USDC tokens
   const updateBalances = useCallback(async () => {
     if (projects.length === 0) return;
     
     try {
       const provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
       
+      // Setup USDC contract
+      const usdcContract = new ethers.Contract(
+        USDC_ADDRESS,
+        USDC_ABI,
+        provider
+      );
+      
       // Fetch balances for all projects in parallel
       const balancePromises = projects.map(async (project) => {
+        // Get USDC balance instead of native ETH
+        const usdcBalance = await usdcContract.balanceOf(project.address);
+        const usdcBalanceFormatted = Number(ethers.utils.formatUnits(usdcBalance, 6)); // USDC uses 6 decimals
+        
+        // Also get the fund contract to check total raised
         const fundContract = new ethers.Contract(
           project.address,
           RegenThemFundABI.abi,
           provider
         );
         
-        const [currentBalance, totalRaised] = await Promise.all([
-          fundContract.getCurrentBalance(),
-          fundContract.getTotalRaised()
-        ]);
+        // Note: getTotalRaised might not reflect USDC balance if contract doesn't track it
+        // We'll use the current USDC balance as both currentBalance and totalRaised for now
         
         return {
           address: project.address,
-          currentBalance: Number(ethers.utils.formatUnits(currentBalance, 18)),
-          totalRaised: Number(ethers.utils.formatUnits(totalRaised, 18)),
-          progress: Math.round((Number(ethers.utils.formatUnits(currentBalance, 18)) / project.goal) * 100)
+          currentBalance: usdcBalanceFormatted,
+          totalRaised: usdcBalanceFormatted, // Using same value for now
+          progress: Math.min(100, Math.round((usdcBalanceFormatted / project.goal) * 100))
         };
       });
       
       const balanceUpdates = await Promise.all(balancePromises);
       
-      // Update individual projects with new balances
-      setProjects(prev => prev.map(project => {
+      // Check if there are any changes
+      let hasChanges = false;
+      const updatedProjects = projects.map(project => {
         const update = balanceUpdates.find(u => u.address === project.address);
-        if (update) {
+        if (update && (project.currentBalance !== update.currentBalance)) {
+          hasChanges = true;
+          console.log(`Balance updated for ${project.name}: $${update.currentBalance} (was $${project.currentBalance})`);
           return {
             ...project,
             currentBalance: update.currentBalance,
@@ -499,9 +512,12 @@ export default function Demo() {
           };
         }
         return project;
-      }));
+      });
       
-      console.log("Fund balances updated");
+      if (hasChanges) {
+        setProjects(updatedProjects);
+        console.log("Fund balances updated");
+      }
     } catch (error) {
       console.error("Error updating balances:", error);
     }
