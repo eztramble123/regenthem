@@ -10,22 +10,17 @@ import { ethers } from "ethers";
 
 import {
   useAccount,
-  useSendTransaction,
-  useSignMessage,
-  useSignTypedData,
   useWaitForTransactionReceipt,
   useDisconnect,
   useConnect,
   useContractRead,
   useWriteContract,
-  useContractReads,
   useChainId,
   useSwitchChain,
 } from "wagmi";
 
 import { config } from "../components/providers/WagmiProvider";
 import { Button } from "./ui/button";
-import { Progress } from "./ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +32,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -51,11 +45,7 @@ import FactoryABI from "../contracts/RegenThemFundFactory.json";
 import RegenThemFundABI from "../contracts/RegenThemFund.json";
 
 // Import the fund fetcher utilities
-import {
-  loadAllFundsData,
-  fetchFundData,
-  debugContract,
-} from "../utils/fundDataFetcher";
+import { fetchFundData, debugContract } from "../utils/fundDataFetcher";
 import FundCard from "./FundCard";
 
 // Import the useMonitorWebSocket hook
