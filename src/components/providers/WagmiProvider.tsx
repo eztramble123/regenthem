@@ -1,13 +1,13 @@
 import { createConfig, http, WagmiProvider } from 'wagmi';
-import { base } from 'wagmi/chains';
+import { base, baseSepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { frameConnector } from '../../lib/connector';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 
 export const config = createConfig({
-  chains: [base],
+  chains: [baseSepolia],
   transports: {
-    [base.id]: http(),
+    [baseSepolia.id]: http('https://sepolia.base.org'),
   },
   connectors: [frameConnector()],
 });
@@ -20,7 +20,7 @@ export default function Provider({ children }: { children: React.ReactNode }) {
       <OnchainKitProvider
         apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
         projectId={process.env.NEXT_PUBLIC_CDP_PROJECT_ID} 
-        chain={base}
+        chain={baseSepolia}
       >
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </OnchainKitProvider>
