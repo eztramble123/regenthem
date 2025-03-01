@@ -6,6 +6,9 @@ let activeConnection: WebSocket | null = null;
 let connectionAttemptTime = 0;
 const MIN_RECONNECT_INTERVAL = 5000; // 5 seconds
 
+// Track funds we've already processed to avoid duplicates
+let processedFunds = new Set<string>();
+
 export function useMonitorWebSocket(
   isConnected: boolean,
   setProjects: React.Dispatch<React.SetStateAction<FundData[]>>,
@@ -47,21 +50,41 @@ export function useMonitorWebSocket(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const processMessage = async (message: any) => {
       if (message.type === "new_fund") {
-        // Handle new fund creation
-        addToast(`New fund detected: ${message.data?.name}`);
-
-        if (message.fundAddress) {
-          const newFundData = await fetchFundData(message.fundAddress);
-          if (newFundData) {
-            setProjects((prev) => {
-              // Avoid duplicates
-              const exists = prev.some(
-                (p) => p.address === message.fundAddress,
-              );
-              if (exists) return prev;
-              return [...prev, newFundData];
-            });
+        const { address, name } = message.data;
+        
+        // Skip if we've already processed this fund
+        if (processedFunds.has(address)) {
+          console.log(`Skipping already processed fund: ${name} (${address})`);
+          return;
+        }
+        
+        // Mark as processed
+        processedFunds.add(address);
+        
+        // Show only one toast notification
+        addToast(`New fund created: ${name}`);
+        
+        // Check if we have a saved image URL for this fund
+        let savedImage = "";
+        try {
+          const fundImages = JSON.parse(localStorage.getItem('fundImages') || '{}');
+          savedImage = fundImages[name] || "";
+        } catch (e) {
+          console.error("Error retrieving saved image:", e);
+        }
+        
+        // Fetch the fund data
+        const fundData = await fetchFundData(address);
+        if (fundData) {
+          // If we had a saved image URL, use it instead of the generated one
+          if (savedImage) {
+            fundData.image = savedImage;
           }
+          
+          setProjects(prev => {
+            if (prev.some(p => p.address === address)) return prev;
+            return [...prev, fundData];
+          });
         }
       } else if (message.type === "connection_status") {
         console.log("Monitor connection status:", message.data.connected);
