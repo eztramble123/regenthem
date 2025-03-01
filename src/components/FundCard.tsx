@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { Progress } from "./ui/progress";
 import { Button } from "./ui/button";
@@ -10,15 +10,28 @@ interface FundCardProps {
 }
 
 export default function FundCard({ fund, onSupportClick }: FundCardProps) {
+  const [imageError, setImageError] = useState(false);
+  
+  // Generate a fallback image URL based on the address
+  const getRandomImageUrl = () => {
+    const imageHash = fund.address.slice(2, 10);
+    return `https://picsum.photos/seed/${imageHash}/400/300`;
+  };
+  
+  // Use the provided image URL, or fall back to random image if error
+  const imageUrl = imageError ? getRandomImageUrl() : fund.image;
+  
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800">
       <div className="relative">
         <Image
-          src={fund.image}
+          src={imageUrl}
           alt={fund.name}
           width={400}
           height={200}
           className="w-full h-48 object-cover rounded-lg mb-3"
+          onError={() => setImageError(true)}
+          unoptimized={true} // Skip Next.js image optimization for external URLs
         />
         <div className="absolute top-2 right-2 bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
           Active
@@ -48,7 +61,7 @@ export default function FundCard({ fund, onSupportClick }: FundCardProps) {
         onClick={() => onSupportClick(fund)}
         className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm py-1"
       >
-        Support
+        Donate
       </Button>
     </div>
   );

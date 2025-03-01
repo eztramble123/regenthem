@@ -126,6 +126,7 @@ export default function Demo() {
     { name: string; description: string }[]
   >([]);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -197,18 +198,18 @@ export default function Demo() {
     };
   }, [isConnected]);
 
-  // Update your submit function to use the new pattern
+  // Update your submit function to include the image
   const onSubmitProject = async (values: {
     goal: { toString: () => string };
     name: unknown;
     description: unknown;
+    image: string;
   }) => {
     // Check if on the correct network
     if (chainId !== config.chains[0].id) {
       toast.info("Switching to Base Sepolia testnet...");
       try {
         await switchChain({ chainId: config.chains[0].id });
-        // Return early and let the user try again after network switch
         return;
       } catch (error) {
         console.error("Failed to switch network:", error);
@@ -219,39 +220,52 @@ export default function Demo() {
 
     try {
       const goalInWei = ethers.utils.parseUnits(values.goal.toString(), 18);
-
-      console.log("Creating fund with params:", {
-        address: FACTORY_ADDRESS,
-        name: values.name,
-        description: values.description,
-        goalInWei: goalInWei.toString(),
-      });
-
-      // Call the contract to create a fund
+      
+      // Save the image value for later
+      const imageUrl = values.image || ""; // Use empty string if image is not provided
+      
+      // Check image URL is valid (optional)
+      const isImageValid = imageUrl === "" || imageUrl.startsWith("http");
+      
+      // Add to pending funds with image
+      setPendingFunds(prev => [
+        ...prev,
+        {
+          name: values.name as string,
+          description: values.description as string,
+          image: isImageValid ? imageUrl : "", // Only use the image if it's valid
+        },
+      ]);
+      
+      // Create the fund on the blockchain
       createFund({
         address: FACTORY_ADDRESS as `0x${string}`,
         abi: FactoryABI.abi,
         functionName: "createRegenThemFund",
         args: [values.name, values.description, goalInWei],
       });
-
-      // Add this pending fund to show it's in progress
-      setPendingFunds((prev) => [
-        ...prev,
-        {
-          name: values.name as string,
-          description: values.description as string,
-        },
-      ]);
-
-      toast.success("Creating fund... please confirm transaction");
-
-      // Reset form after submission
+      
+      // Store image URL in localStorage
+      if (isImageValid && imageUrl) {
+        const fundImages = JSON.parse(localStorage.getItem('fundImages') || '{}');
+        fundImages[values.name as string] = imageUrl;
+        localStorage.setItem('fundImages', JSON.stringify(fundImages));
+      }
+      
+      // Only show transaction submitted toast (not fund created - WebSocket will handle that)
+      toast.success("Transaction submitted!");
+      
+      // Reset form
       projectForm.reset();
+      
+      // Force close the dialog with a short delay to ensure state updates properly
+      setTimeout(() => {
+        setShowCreateDialog(false);
+        console.log("Dialog should be closed now");
+      }, 100);
+      
     } catch (error) {
       console.error("Error creating fund:", error);
-      console.error("Form values:", values);
-      console.error("Contract address:", FACTORY_ADDRESS);
       toast.error("Failed to create fund");
     }
   };
@@ -660,7 +674,7 @@ export default function Demo() {
 
       {/* Fixed Dialog Button - always visible at bottom right */}
       <div className="fixed bottom-6 right-6 z-50">
-        <Dialog>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
             <Button
               className="h-14 w-14 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg flex items-center justify-center"
