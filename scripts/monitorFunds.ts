@@ -34,7 +34,7 @@ async function checkFunds() {
 
     console.log(`📊 Found ${funds.length} funds:\n`);
     
-    funds.forEach((fund, index) => {
+    funds.forEach((fund: any, index: number) => {
       // Check if this is a new fund or has changes
       const isNewFund = !previousFunds[fund.address];
       const hasDonation = !isNewFund && previousFunds[fund.address].currentBalance !== fund.currentBalance;
@@ -64,7 +64,7 @@ async function checkFunds() {
     });
     
     // Update the previous funds for the next comparison
-    previousFunds = funds.reduce((acc, fund) => {
+    previousFunds = funds.reduce((acc: any, fund: any) => {
       acc[fund.address] = fund;
       return acc;
     }, {} as Record<string, any>);
